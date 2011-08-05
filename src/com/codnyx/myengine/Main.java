@@ -1,10 +1,8 @@
 package com.codnyx.myengine;
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.image.ImageObserver;
 
 import javax.swing.JFrame;
 
@@ -13,7 +11,6 @@ import javax.swing.JFrame;
 public class Main extends JFrame implements Runnable, KeyListener{
 	
 	private static final long serialVersionUID = 1L;
-//	private PerspectiveTransformation t;
 	private AffineTransformation a;
 	boolean isRunning = false;
 	private PolygonRenderer renderer;
@@ -59,14 +56,6 @@ public class Main extends JFrame implements Runnable, KeyListener{
 		Vertex v7 = new Vertex(new float[]{-1,-1,-1}, new float[]{-sr3, -sr3, -sr3}, Color.cyan);
 		Vertex v8 = new Vertex(new float[]{-1,1,-1}, new float[]{-sr3, sr3, -sr3}, Color.pink);
 
-		
-//		final float[][] cubeface1 = {
-//				{1,1,1}, // 0
-//				{-1,1,1}, //1
-//				{-1,-1,1}, //2
-//				{1,-1,1}, //3				
-//		};
-//		cube[0] = new Polygon(cubeface1, Color.red);
 		cube[0] = new Polygon(new Vertex[]{v1,v2,v3,v4});
 		cube[1] = new Polygon(new Vertex[]{v5,v6,v7,v8});
 		cube[2] = new Polygon(new Vertex[]{v1,v4,v6,v5});
@@ -74,50 +63,6 @@ public class Main extends JFrame implements Runnable, KeyListener{
 		cube[4] = new Polygon(new Vertex[]{v1,v5,v8,v2});
 		cube[5] = new Polygon(new Vertex[]{v7,v6,v4,v3});
 
-
-//		final float[][] cubeface2 = {
-//				{1,1,-1}, //4
-//				{1,-1,-1}, //7		
-//				{-1,-1,-1}, //6
-//				{-1,1,-1}, //5
-//				
-//		};
-//		cube[1] = new Polygon(cubeface2, Color.magenta);
-//
-//		final float[][] cubeface3 = {
-//				{1,1,1},
-//				{1,-1,1},
-//				{1,-1,-1},
-//				{1,1,-1},					
-//		};
-//		cube[2] = new Polygon(cubeface3, Color.green);
-//		
-//
-//		final float[][] cubeface4 = {
-//				{-1,1,1},
-//				{-1,1,-1},	
-//				{-1,-1,-1},		
-//				{-1,-1,1},		
-//		};
-//		cube[3] = new Polygon(cubeface4, Color.yellow);
-//
-//
-//		final float[][] cubeface5 = {
-//				{1,1,1},
-//				{1,1,-1},
-//				{-1,1,-1},
-//				{-1,1,1},					
-//		};
-//		cube[4] = new Polygon(cubeface5, Color.blue);
-//
-//
-//		final float[][] cubeface6 = {
-//				{1,-1,1},
-//				{-1,-1,1},	
-//				{-1,-1,-1},	
-//				{1,-1,-1},			
-//		};
-//		cube[5] = new Polygon(cubeface6, Color.cyan);		
 
 		v1 = new Vertex(new float[]{1,1,0}, new float[]{sr3, sr3, sr3},Color.red);
 		v2 = new Vertex(new float[]{-1,1,0}, new float[]{-sr3, sr3, sr3}, Color.blue);
@@ -192,6 +137,13 @@ public class Main extends JFrame implements Runnable, KeyListener{
 			
 			for(Polygon face:cube)
 				renderer.render(g,face);
+			
+			a.loadIdentity();
+			a.rotateZ(angle);
+			a.translateTo(5,0,ztr);
+			a.rotateZ(angle);
+			renderer.render(g, face);
+					
 				
 //			renderer.render(g, face);
 			g.setColor(Color.white);

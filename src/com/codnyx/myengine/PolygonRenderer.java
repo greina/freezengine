@@ -79,7 +79,7 @@ public class PolygonRenderer
 	{
 		int a1,r1,g1,b1,a0,r0,g0,b0,n;
 		MutableColor colorBuffer = new MutableColor(0);
-		float step;
+		int step_fp;
 		/*
 		 * Backface culling
 		 */
@@ -139,9 +139,9 @@ public class PolygonRenderer
 			p1 = c1.projection;
 			p0 = c0.projection;
 						
-			float m = ((float)p1[0] - p0[0])/((float)p1[1] - p0[1]);
+			int m_fp = FixedPoint.FromFloat(((float)p1[0] - p0[0])/((float)p1[1] - p0[1]));
 			n = y_end-y_start+1;
-			step = 1.0f/n;
+			step_fp = FixedPoint.FromFloat(1.0f/n);
 			a1 = c1.color.getAlpha();
 			r1 = c1.color.getRed();
 			g1 = c1.color.getGreen();
@@ -154,14 +154,16 @@ public class PolygonRenderer
 
 			if(p1[1] == p0[1])
 			{
-				scanLines[y_start>0?y_start:0].touch(p0[0], prev.color);
-				scanLines[y_start>0?y_start:0].touch(p1[0], cur.color);
+				y_start = y_start>0?y_start:0;
+				y_start = y_start<height?y_start:height-1;
+				scanLines[y_start].touch(p0[0], prev.color);
+				scanLines[y_start].touch(p1[0], cur.color);
 			}
 			else
 			for(int j = y_start>0?y_start:0; j <= y_end && j < scanLines.length; j++)
 			{
-				scanLines[j].touch((int) (m*(j-p0[1])+p0[0]),// cur.color);
-						interpolateColor(colorBuffer, j-y_start,n,step,r0,r1,g0,g1,b0,b1, a0, a1));
+				scanLines[j].touch(FixedPoint.ToInt(m_fp*(j-p0[1]))+p0[0],// cur.color);
+						interpolateColor(colorBuffer, j-y_start,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, c0.color, c1.color));
 			}
 		}
 		Scan scan;
@@ -170,59 +172,51 @@ public class PolygonRenderer
 		for(int j = yMinBound; j <= yMaxBound; scan.reset(), j++)
 		{
 			scan = scanLines[j];
-//			if(scan.min_color.equals(scan.max_color))
-//			{
-//				drawLine(data, scan.min_color, scan.min, j, scan.max, j);
-//				g.setColor(scan.min_color);
-//				g.drawLine(scan.min, j, scan.max, j);
-////				System.out.println(String.format("Writing line from (%d,%d) to (%d,%d) and color %s", scan.min, j, scan.max, j, scan.min_color.toString()));
-//			}
-//			else
-//			{
-				n = scan.max-scan.min+1;
-				step = 1.0f/n;
-				a1 = scan.max_color.getAlpha();
-				r1 = scan.max_color.getRed();
-				g1 = scan.max_color.getGreen();
-				b1 = scan.max_color.getBlue();
+			n = scan.max-scan.min+1;
+			step_fp = FixedPoint.FromFloat(1.0f/n);
+			a1 = scan.max_color.getAlpha();
+			r1 = scan.max_color.getRed();
+			g1 = scan.max_color.getGreen();
+			b1 = scan.max_color.getBlue();
 
-				a0 = scan.min_color.getAlpha();
-				r0 = scan.min_color.getRed();
-				g0 = scan.min_color.getGreen();
-				b0 = scan.min_color.getBlue();
-				
-				if(scan.min < xMinBound)
-					xMinBound = scan.min;
-				if(scan.max > xMaxBound)
-					xMaxBound = scan.max;
-				
-				for(int x = scan.min; x <= scan.max; x++)
-				{
-//					g.setColor(interpolateColor(colorBuffer, x-scan.min,n,step,r0,r1,g0,g1,b0,b1, a0, a1));
-//					g.fillRect(x, j, 1, 1);
-					if(j < 0 || j >= height || x < 0 || x >= width)
-						continue;
-					data[0][j*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step,r0,r1,g0,g1,b0,b1, a0, a1).getRGB();
-//					g.drawLine(x, j, x, j);
-				}
-//			}
+			a0 = scan.min_color.getAlpha();
+			r0 = scan.min_color.getRed();
+			g0 = scan.min_color.getGreen();
+			b0 = scan.min_color.getBlue();
+
+			if(scan.min < xMinBound)
+				xMinBound = scan.min;
+			if(scan.max > xMaxBound)
+				xMaxBound = scan.max;
+
+			for(int x = scan.min; x <= scan.max; x++)
+			{
+				if(j < 0 || j >= height || x < 0 || x >= width)
+					continue;
+				data[0][j*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color).getRGB();
+			}
 		}
 		
 		gc.drawImage(image, xMinBound, yMinBound, xMaxBound, yMaxBound, xMinBound, yMinBound, xMaxBound, yMaxBound, observer);
 		
 	}
 
-	private final static Color interpolateColor(MutableColor colorBuffer, int i, int n, float oneovern, int r0, int r1, int g0,
-			int g1, int b0, int b1, int a0, int a1)
+	private final static Color interpolateColor(MutableColor colorBuffer, int i, int n, int oneovern_fp, int r0, int r1, int g0,
+			int g1, int b0, int b1, int a0, int a1, Color c1, Color c2)
 	{
-		float h = i*oneovern;
-		float l = (n-i)*oneovern;
-		int a = (int) (l*a0 + h*a1);
-		int r = (int) (l*r0 + h*r1);
-		int g = (int) (l*g0 + h*g1);
-		int b = (int) (l*b0 + h*b1);
+		int h = i*oneovern_fp;
+		int l = (n-i)*oneovern_fp;
+		int a = FixedPoint.ToInt(l*a0 + h*a1);
+		int r = FixedPoint.ToInt(l*r0 + h*r1);
+		int g = FixedPoint.ToInt(l*g0 + h*g1);
+		int b = FixedPoint.ToInt(l*b0 + h*b1);
 		
 		colorBuffer.setRGBA(r,g,b,a);
+//		int c1v = c1.getRGB();
+//		int c2v = c2.getRGB();
+//		int b = ((c1v&0xff)*l+(c2v&0xff))&0xff;
+//		int value = ((int)(((int)l)*c1.getRGB())) + ((int)(((int)h)*c2.getRGB()));
+//		colorBuffer.setRGBA(value);
 		return colorBuffer;
 	}
 
