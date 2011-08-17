@@ -38,4 +38,18 @@ public class MyMath
 		result[2] = vec[2]*s;
 		return result;		
 	}
+	
+	public static final float length(float[] vec)
+	{
+		return (float)Math.sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+	}
+
+	public static final float[] normalize(float[] vec)
+	{
+		float l = length(vec);
+		vec[0] /= l;
+		vec[1] /= l;
+		vec[2] /= l;
+		return vec;		
+	}
 }

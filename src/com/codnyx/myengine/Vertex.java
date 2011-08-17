@@ -6,7 +6,7 @@ public class Vertex {
 	float[] point;
 	float[] normal;
 	int[] projection = {0,0};
-	Color color;
+	Color color = Color.white;
 	float[] tnormal = {0,0,0};
 	public boolean isVisible;
 	

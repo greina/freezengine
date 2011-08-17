@@ -1,8 +1,14 @@
 package com.codnyx.myengine;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.GraphicsConfiguration;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.VolatileImage;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import javax.swing.JFrame;
 
@@ -28,23 +34,17 @@ public class Main extends JFrame implements Runnable, KeyListener{
 	
 	Polygon[] cube;
 	
-	
-	float[][] cubepoint = {
-			{1,1,1}, // 0
-			{-1,1,1}, //1
-			{-1,-1,1}, //2
-			{1,-1,1}, //3
-
-			{1,1,-1}, //4
-			{-1,1,-1}, //5
-			{-1,-1,-1}, //6
-			{1,-1,-1}, //7		
-			
-	};
 	private Polygon face;
-	
+	Mesh m;
 	private void init()
 	{
+		InputStream stream = this.getClass().getResourceAsStream("/cow.obj");
+		try {
+			this.m = new ObjParser().parseStream(new BufferedReader(new InputStreamReader(stream)));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
 		cube = new Polygon[6];
 		float sr3 = (float) (1.0f/Math.sqrt(3)); 
 		Vertex v1 = new Vertex(new float[]{1,1,1}, new float[]{sr3, sr3, sr3},Color.red);
@@ -71,87 +71,128 @@ public class Main extends JFrame implements Runnable, KeyListener{
 		face = new Polygon(new Vertex[]{v1,v2,v3,v4});
 		
 	}	
-	
-	float[][] points = {
-			{-1,-1,1},
-			{-1,1,1},
-			{1,1,1},
-			{1,-1,1},
-
-			{-1,-1,1},
-			{-1,-1,-1},
-			{-1,1,-1},	
-			{1,1,-1},	
-			{1,-1,-1},	
-			{1,-1,1},		
-			{1,-1,-1},		
-			{-1,-1,-1},		
-			{-1,1,-1},		
-			{-1,1,1},		
-			{1,1,1},		
-			{1,1,-1},	
-	};
 
 	int counter = -1;
 	final float angle_step = (float) (Math.PI/360);
 	float angle = 0;
 	private float ztr = -10;
+	long framelength = 0;
+	private VolatileImage volatileImg;
 	public void run()
 	{
 		float fps = 0;
 		long oldTick = 0;
+		float maxfps = 0;
 		while(isRunning)
 		{
 			if(fps == 0)
 			{
 				if(oldTick != 0)
 				{
-					long framelength = System.nanoTime() - oldTick;
+					framelength = System.nanoTime() - oldTick;
 					fps = (float) (1e9/(float)framelength);
 				}
 			}
 			else
 			{
-				long framelength = System.nanoTime() - oldTick;
+				framelength = System.nanoTime() - oldTick;
 				float newfps = (float) (1e9/(float)framelength);
 				fps = .05f*newfps+.95f*fps; 
 			}
-			oldTick = System.nanoTime();
 			if(!this.isVisible())
 				try {
 					Thread.sleep(1000);
+					continue;
 				} catch (InterruptedException e1) {
 					e1.printStackTrace();
 				}
-			Graphics g = this.getBufferStrategy().getDrawGraphics();
-			renderer.clean();
-			g.setColor(Color.black);
-			g.fillRect(0, 0, 1000, 750);
+			
 
-			angle += angle_step;
-			a.loadIdentity();
-			a.rotateX(angle);
-			a.rotateY(2*angle);
-//			a.rotateZ(4*angle);
-			a.translateTo(0,0,ztr);
+//			try {
+//				long st = (long) (framelength/1e6 - 1000.0f/fps);
+//				if(st > 0)
+//					Thread.sleep(st);
+//			} catch (InterruptedException e1) {
+//				e1.printStackTrace();
+//			}
 			
-			for(Polygon face:cube)
-				renderer.render(g,face);
+			oldTick = System.nanoTime();
+//			createBackBuffer();
+//			do {
+//				   GraphicsConfiguration gc = this.getGraphicsConfiguration();
+//				   int valCode = volatileImg.validate(gc);
+//				   
+//				   if(valCode==VolatileImage.IMAGE_INCOMPATIBLE){
+//				    createBackBuffer(); 
+//				   }
+//				  
+//				   Graphics offscreenGraphics = volatileImg.getGraphics();
+//				   Graphics g = offscreenGraphics;
+//				   doPaint(g); // call core paint method.
+//
+//				   g.setColor(Color.white);
+//				   g.drawString(String.format("FPS: %.2f",fps), 50, 50);
+//				   g.drawString(String.format("Camera z=%.2f ",-ztr), 50, 70);
+//				   if(fps > maxfps)
+//				   {
+//					   maxfps = fps;
+//					   System.out.println("Spike " + maxfps);
+//				   }
+//				   
+//				   this.getBufferStrategy().getDrawGraphics().drawImage(volatileImg, 0, 0, this);
+//
+//					getBufferStrategy().show();
+//				   // Test if content is lost   
+//			  } while(volatileImg.contentsLost());
 			
-			a.loadIdentity();
-			a.rotateZ(angle);
-			a.translateTo(5,0,ztr);
-			a.rotateZ(angle);
-			renderer.render(g, face);
-					
-				
-//			renderer.render(g, face);
-			g.setColor(Color.white);
-					g.drawString(String.format("FPS: %.2f",fps), 50, 50);
-					g.drawString(String.format("Camera z=%.2f ",-ztr), 50, 70);
-			g.dispose();
-			getBufferStrategy().show();
+
+			   Graphics g = getBufferStrategy().getDrawGraphics();
+			   doPaint(g); // call core paint method.
+
+			   g.setColor(Color.white);
+			   g.drawString(String.format("FPS: %.2f",fps), 50, 50);
+			   g.drawString(String.format("Camera z=%.2f ",-ztr), 50, 70);
+			   if(fps > maxfps)
+			   {
+				   maxfps = fps;
+				   System.out.println("Spike " + maxfps);
+			   }
+			   
+
+				getBufferStrategy().show();
+
 		}
+	}
+
+	private void doPaint(Graphics g) 
+	{
+		renderer.clean();
+		g.setColor(Color.black);
+		g.fillRect(0, 0, 1000, 750);
+
+		angle += angle_step;
+		a.loadIdentity();
+		a.rotateX(angle);
+		a.rotateY(2*angle);
+//		a.rotateZ(4*angle);
+		a.translateTo(0,0,ztr);
+		
+		for(Polygon face:cube)
+			renderer.render(g,face);
+//		m.render(renderer, g);
+		
+		a.loadIdentity();
+		a.rotateZ(angle);
+		a.translateTo(5,0,ztr);
+		a.rotateZ(angle);
+		renderer.render(g, face);
+		renderer.commit(g);
+	}
+
+	private void createBackBuffer() 
+	{
+		GraphicsConfiguration gc = getGraphicsConfiguration();
+		volatileImg = gc.createCompatibleVolatileImage(getWidth(), getHeight());
 	}
 
 	public static void main(String[] args)

@@ -74,6 +74,7 @@ public class PolygonRenderer
 			return false;
 		}
 	};
+	private int[] bounds = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
 	
 	public void render(Graphics gc, Polygon p)
 	{
@@ -194,11 +195,20 @@ public class PolygonRenderer
 				if(j < 0 || j >= height || x < 0 || x >= width)
 					continue;
 				data[0][j*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color).getRGB();
+//				gc.setColor(interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color));
+//				gc.drawLine(x, j, x, j);
 			}
 		}
-		
-		gc.drawImage(image, xMinBound, yMinBound, xMaxBound, yMaxBound, xMinBound, yMinBound, xMaxBound, yMaxBound, observer);
-		
+//		gc.drawImage(image, xMinBound, yMinBound, xMaxBound, yMaxBound, xMinBound, yMinBound, xMaxBound, yMaxBound, observer);
+		if(bounds[0] > xMinBound)
+			bounds [0] = xMinBound;
+		if(bounds[1] > yMinBound)
+			bounds[1] = yMinBound;
+		if(bounds[2] < xMaxBound)
+			bounds[2] = xMaxBound;
+		if(bounds[3] < yMaxBound)
+			bounds[3] = yMaxBound;
+			
 	}
 
 	private final static Color interpolateColor(MutableColor colorBuffer, int i, int n, int oneovern_fp, int r0, int r1, int g0,
@@ -212,11 +222,6 @@ public class PolygonRenderer
 		int b = FixedPoint.ToInt(l*b0 + h*b1);
 		
 		colorBuffer.setRGBA(r,g,b,a);
-//		int c1v = c1.getRGB();
-//		int c2v = c2.getRGB();
-//		int b = ((c1v&0xff)*l+(c2v&0xff))&0xff;
-//		int value = ((int)(((int)l)*c1.getRGB())) + ((int)(((int)h)*c2.getRGB()));
-//		colorBuffer.setRGBA(value);
 		return colorBuffer;
 	}
 
@@ -233,7 +238,14 @@ public class PolygonRenderer
 
 	public void clean() 
 	{
+		bounds[0] = bounds[1] = Integer.MAX_VALUE;
+		bounds[2] = bounds[3] = Integer.MIN_VALUE;
 		Arrays.fill(((DataBufferInt)image.getRaster().getDataBuffer()).getBankData()[0], 0);
+	}
+
+	public void commit(Graphics g) 
+	{
+		g.drawImage(image, bounds[0], bounds[1], bounds[2], bounds[3], bounds[0], bounds[1], bounds[2], bounds[3], observer);
 	}
 	
 
