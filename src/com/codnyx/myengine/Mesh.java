@@ -5,7 +5,7 @@ import java.util.LinkedList;
 
 public class Mesh 
 {
-	LinkedList<Polygon> polygons = new LinkedList<Polygon>();
+	public LinkedList<Polygon> polygons = new LinkedList<Polygon>();
 	
 	public void addPolygon(Polygon polygon)
 	{

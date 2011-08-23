@@ -8,7 +8,7 @@ public class Vertex {
 	int[] projection = {0,0};
 	Color color = Color.white;
 	float[] tnormal = {0,0,0};
-	public boolean isVisible;
+	public float depth;
 	
 	public Vertex()
 	{

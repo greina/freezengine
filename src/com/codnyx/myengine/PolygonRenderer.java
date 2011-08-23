@@ -20,6 +20,7 @@ public class PolygonRenderer
 	private PerspectiveTransformation projT;
 	private AffineTransformation modelT;
 	private BufferedImage image;
+	private float[] zBuffer;
 	
 	public PolygonRenderer(int width, int height)
 	{
@@ -48,6 +49,7 @@ public class PolygonRenderer
 			this.scanLines[i] = new Scan();
 		this.modelT = new AffineTransformation();
 		this.image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		this.zBuffer = new float[width*height];
 		
 	}
 	
@@ -67,6 +69,7 @@ public class PolygonRenderer
 
 	float[] vecBuffer = {0,0,0};
 	float[] vecBuffer2 = {0,0,0};
+	float[] vecBuffer3 = {0,0,0};
 	private ImageObserver observer = new ImageObserver() {
 		@Override
 		public boolean imageUpdate(Image img, int infoflags, int x, int y,
@@ -78,19 +81,35 @@ public class PolygonRenderer
 	
 	public void render(Graphics gc, Polygon p)
 	{
+		float[] tnormal = {0,0,0}, tu = null, tv = null, to = null;
 		int a1,r1,g1,b1,a0,r0,g0,b0,n;
+		a1 = r1 = g1 = b1 = a0 = r0 = g0 = b0 = n = 0;
 		MutableColor colorBuffer = new MutableColor(0);
+		
 		int step_fp;
 		/*
 		 * Backface culling
 		 */
-		modelT.normal_transform(p.normal, vecBuffer);
+		modelT.normal_transform(p.normal, tnormal);
 		modelT.transform(p.center,vecBuffer2);
-		if(MyMath.dotProduct(vecBuffer, vecBuffer2)>=0)
+		if(MyMath.dotProduct(tnormal, vecBuffer2)>=0)
 			return;
 		reset();
 		
-		int[][] data = ((DataBufferInt)image.getRaster().getDataBuffer()).getBankData();
+		int[] data = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
+		
+		boolean textureEnabled = p.texture != null;
+		
+		if(textureEnabled)
+		{
+			to = p.texture.O.clone();
+			modelT.transform(to);
+			tu = p.texture.U.clone();
+			modelT.normal_transform(tu);
+			tv = p.texture.V.clone();
+			modelT.normal_transform(tv);
+		}
+		
 		
 		/*
 		 * Rendering
@@ -100,10 +119,13 @@ public class PolygonRenderer
 		int i = 0;
 		
 		modelT.transform(p.vertices[i].point,vecBuffer);
-		p.vertices[i].isVisible = projT.project(vecBuffer, p.vertices[i].projection);
+		p.vertices[i].depth = projT.project(vecBuffer, p.vertices[i].projection);
 		modelT.normal_transform(p.vertices[i].normal, p.vertices[i].tnormal);
 		i++;
 		
+		/*
+		 * Scan all the edges in the polygon
+		 */
 		for(; i <= p.vertices.length; i++)
 		{
 			Vertex cur = p.vertices[i%p.vertices.length];
@@ -111,15 +133,27 @@ public class PolygonRenderer
 			if(cur != p.vertices[0])
 			{
 				modelT.transform(cur.point,vecBuffer);
-				cur.isVisible = projT.project(vecBuffer, cur.projection);
+				cur.depth = projT.project(vecBuffer, cur.projection);
 				modelT.normal_transform(cur.normal, cur.tnormal);
 			}
+
+			int yy = prev.projection[1];
+			yy = yy>=0?(yy<height?yy:(height-1)):0;
+			int xx = prev.projection[0];
+			xx = xx>=0?(xx<width?xx:(width-1)):0;
+			float zb0 = zBuffer[yy*width+xx];
 			
-			if(!cur.isVisible || !prev.isVisible)
-				continue;
+			yy = cur.projection[1];
+			yy = yy>=0?(yy<height?yy:(height-1)):0;
+			xx = cur.projection[0];
+			xx = xx>=0?(xx<width?xx:(width-1)):0;
+			float zb1 = zBuffer[yy*width+xx];
 			
-			touch(cur);
-			touch(prev);
+			zb0 = prev.depth;
+			zb1 = cur.depth;
+			// Modify y bounds to include the new vertices
+			correctYBounds(cur);
+			correctYBounds(prev);
 			
 			int y_start, y_end;
 			Vertex c0;
@@ -133,73 +167,138 @@ public class PolygonRenderer
 			{
 				c0 = cur;
 				c1 = prev;
+				float temp = zb0;
+				zb0 = zb1;
+				zb1 = temp;
 			}
 
 			y_end = c1.projection[1];
 			y_start = c0.projection[1];
 			p1 = c1.projection;
 			p0 = c0.projection;
-						
-			int m_fp = FixedPoint.FromFloat(((float)p1[0] - p0[0])/((float)p1[1] - p0[1]));
+			
+			int m_fp = FixedPoint16.FromFloat(((float)p1[0] - p0[0])/((float)p1[1] - p0[1]));
 			n = y_end-y_start+1;
-			step_fp = FixedPoint.FromFloat(1.0f/n);
-			a1 = c1.color.getAlpha();
-			r1 = c1.color.getRed();
-			g1 = c1.color.getGreen();
-			b1 = c1.color.getBlue();
-
-			a0 = c0.color.getAlpha();
-			r0 = c0.color.getRed();
-			g0 = c0.color.getGreen();
-			b0 = c0.color.getBlue();
+			step_fp = FixedPoint16.FromFloat(1.0f/n);
+			
+			if(!textureEnabled)
+			{
+				a1 = c1.color.getAlpha();
+				r1 = c1.color.getRed();
+				g1 = c1.color.getGreen();
+				b1 = c1.color.getBlue();
+	
+				a0 = c0.color.getAlpha();
+				r0 = c0.color.getRed();
+				g0 = c0.color.getGreen();
+				b0 = c0.color.getBlue();
+			}
 
 			if(p1[1] == p0[1])
 			{
 				y_start = y_start>0?y_start:0;
 				y_start = y_start<height?y_start:height-1;
-				scanLines[y_start].touch(p0[0], prev.color);
-				scanLines[y_start].touch(p1[0], cur.color);
+				if(!textureEnabled)
+				{
+					scanLines[y_start].touch(p0[0], c0.color, zb0);
+					scanLines[y_start].touch(p1[0], c1.color, zb1);
+				}
+				else
+				{
+					scanLines[y_start].touch(p0[0], zb0);
+					scanLines[y_start].touch(p1[0], zb1);
+				}
 			}
 			else
-			for(int j = y_start>0?y_start:0; j <= y_end && j < scanLines.length; j++)
 			{
-				scanLines[j].touch(FixedPoint.ToInt(m_fp*(j-p0[1]))+p0[0],// cur.color);
-						interpolateColor(colorBuffer, j-y_start,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, c0.color, c1.color));
+				int dx = p0[0] - p1[0];
+				int dy = p0[1] - p1[1];
+				float dd = (zb1 - zb0)/(dx*dx + dy*dy);
+				for(int y = y_start>0?y_start:0; y <= y_end && y < scanLines.length; y++)
+				{
+					int x = FixedPoint16.ToInt(m_fp*(y-p0[1]))+p0[0];
+					dx = x - p0[0];
+					dy = y - p0[1];
+					float zb = zb0 + dd*(dx*dx + dy*dy);
+					if(!textureEnabled)
+						scanLines[y].touch(x,
+								interpolateColor(colorBuffer, y-y_start,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, c0.color, c1.color), zb);
+					else
+						scanLines[y].touch(x, zb);
+				}
 			}
 		}
 		Scan scan;
 		int xMinBound = Integer.MAX_VALUE;
 		int xMaxBound = Integer.MIN_VALUE;
-		for(int j = yMinBound; j <= yMaxBound; scan.reset(), j++)
+		for(int y = yMinBound; y <= yMaxBound; scan.reset(), y++)
 		{
-			scan = scanLines[j];
-			n = scan.max-scan.min+1;
-			step_fp = FixedPoint.FromFloat(1.0f/n);
-			a1 = scan.max_color.getAlpha();
-			r1 = scan.max_color.getRed();
-			g1 = scan.max_color.getGreen();
-			b1 = scan.max_color.getBlue();
-
-			a0 = scan.min_color.getAlpha();
-			r0 = scan.min_color.getRed();
-			g0 = scan.min_color.getGreen();
-			b0 = scan.min_color.getBlue();
+			scan = scanLines[y];
 
 			if(scan.min < xMinBound)
 				xMinBound = scan.min;
 			if(scan.max > xMaxBound)
 				xMaxBound = scan.max;
-
-			for(int x = scan.min; x <= scan.max; x++)
+			
+			if(!textureEnabled)
 			{
-				if(j < 0 || j >= height || x < 0 || x >= width)
-					continue;
-				data[0][j*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color).getRGB();
-//				gc.setColor(interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color));
-//				gc.drawLine(x, j, x, j);
+				n = scan.max-scan.min+1;
+				step_fp = FixedPoint16.FromFloat(1.0f/n);
+				a1 = scan.max_color.getAlpha();
+				r1 = scan.max_color.getRed();
+				g1 = scan.max_color.getGreen();
+				b1 = scan.max_color.getBlue();
+	
+				a0 = scan.min_color.getAlpha();
+				r0 = scan.min_color.getRed();
+				g0 = scan.min_color.getGreen();
+				b0 = scan.min_color.getBlue();
+				
+				float zstep = scan.computeZStep();
+	
+				for(int x = scan.min; x <= scan.max; x++)
+				{
+					if(y < 0 || y >= height || x < 0 || x >= width)
+						continue;
+					float zb = scan.minzb + zstep*(x-scan.min)*(x-scan.min);
+					if(zb <= zBuffer[y*width+x])
+					{
+						data[y*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color).getRGB();
+						zBuffer[y*width+x] = zb;
+					}
+				}
+			}
+			else
+			{
+
+				float zstep = scan.computeZStep();
+				for(int x = scan.min; x <= scan.max; x++)
+				{
+					if(y < 0 || y >= height || x < 0 || x >= width)
+						continue;
+
+					float zb = scan.minzb + zstep*(x-scan.min)*(x-scan.min);
+					if(zb <= zBuffer[y*width+x])
+					{
+						// Compute w = VecBuffer
+						MyMath.init(-1,vecBuffer);
+						this.projT.aTrasform(x,y, vecBuffer);
+						float one_overNW = 1/MyMath.dotProduct(vecBuffer, tnormal);
+						// Compute P -> VecBuffer
+						MyMath.scale(one_overNW*MyMath.dotProduct(tnormal, to), vecBuffer, vecBuffer);
+						// VecBuffer = P-O
+						MyMath.subtract(vecBuffer, to, vecBuffer);
+	
+						float c1 = MyMath.dotProduct(vecBuffer, tu);
+						float c2 = MyMath.dotProduct(vecBuffer, tv);
+						a0 = (int) (c1*p.texture.u[0] + c2*p.texture.v[0] + p.texture.o[0]);
+						a1 = (int) (c1*p.texture.u[1] + c2*p.texture.v[1] + p.texture.o[1]);
+						data[y*width + x] = p.texture.getColor(a0, a1);
+						zBuffer[y*width+x] = zb;
+					}
+				}
 			}
 		}
-//		gc.drawImage(image, xMinBound, yMinBound, xMaxBound, yMaxBound, xMinBound, yMinBound, xMaxBound, yMaxBound, observer);
 		if(bounds[0] > xMinBound)
 			bounds [0] = xMinBound;
 		if(bounds[1] > yMinBound)
@@ -216,16 +315,16 @@ public class PolygonRenderer
 	{
 		int h = i*oneovern_fp;
 		int l = (n-i)*oneovern_fp;
-		int a = FixedPoint.ToInt(l*a0 + h*a1);
-		int r = FixedPoint.ToInt(l*r0 + h*r1);
-		int g = FixedPoint.ToInt(l*g0 + h*g1);
-		int b = FixedPoint.ToInt(l*b0 + h*b1);
+		int a = FixedPoint16.ToInt(l*a0 + h*a1);
+		int r = FixedPoint16.ToInt(l*r0 + h*r1);
+		int g = FixedPoint16.ToInt(l*g0 + h*g1);
+		int b = FixedPoint16.ToInt(l*b0 + h*b1);
 		
 		colorBuffer.setRGBA(r,g,b,a);
 		return colorBuffer;
 	}
 
-	private void touch(Vertex v) 
+	private final void correctYBounds(Vertex v) 
 	{
 		int y = v.projection[1];
 		y = y>0?y:0;
@@ -241,6 +340,7 @@ public class PolygonRenderer
 		bounds[0] = bounds[1] = Integer.MAX_VALUE;
 		bounds[2] = bounds[3] = Integer.MIN_VALUE;
 		Arrays.fill(((DataBufferInt)image.getRaster().getDataBuffer()).getBankData()[0], 0);
+		Arrays.fill(zBuffer, 1.0f);
 	}
 
 	public void commit(Graphics g) 
@@ -255,6 +355,8 @@ class Scan
 {
 	int min;
 	int max;
+	float minzb;
+	float maxzb;
 	MutableColor max_color = new MutableColor(0);
 	MutableColor min_color = new MutableColor(0);
 	
@@ -263,22 +365,38 @@ class Scan
 		reset();
 	}
 	
-	void touch(int x, Color color)
+	public float computeZStep() 
 	{
-//		if(min == null || min.projection[0] > v.projection[0])
-//			min = v;
-//		
-//		if(max == null || max.projection[0] < v.projection[0])
-//			max = v;
+		return (maxzb - minzb)/((min-max)*(min-max)); 
+	}
+
+	public void touch(int x, float zb)
+	{
+		if(x > max)
+		{
+			max = x;
+			maxzb = zb;
+		}
+		if(x < min)
+		{
+			min = x;
+			minzb = zb;
+		}
+	}
+
+	void touch(int x, Color color, float zb)
+	{
 		if(x > max)
 		{
 			max = x;
 			max_color.setRGBA(color.getRGB());
+			maxzb = zb;
 		}
 		if(x < min)
 		{
 			min = x;
 			min_color.setRGBA(color.getRGB());
+			minzb = zb;
 		}
 	}
 	

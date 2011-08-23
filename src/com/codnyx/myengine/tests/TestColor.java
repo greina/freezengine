@@ -49,21 +49,21 @@ public class TestColor {
 			assertEquals(color3_1, color3_2);
 		}
 	}
-
-	private int getBlue(int color2) {
-		return (color2 )&0xff;
-	}
-
-	private int getGreen(int color2) {
-		return (color2 >> 8)&0xff;
-	}
-
-	private int getRed(int color2) {
-		return (color2 >> 16)&0xff;
-	}
-
-	private int getAlpha(int color1) {
-		return (color1 >> 24)&0xff;
-	}
+//
+//	private int getBlue(int color2) {
+//		return (color2 )&0xff;
+//	}
+//
+//	private int getGreen(int color2) {
+//		return (color2 >> 8)&0xff;
+//	}
+//
+//	private int getRed(int color2) {
+//		return (color2 >> 16)&0xff;
+//	}
+//
+//	private int getAlpha(int color1) {
+//		return (color1 >> 24)&0xff;
+//	}
 
 }

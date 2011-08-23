@@ -1,23 +1,23 @@
 package com.codnyx.myengine;
 
-public class FixedPoint 
+public class FixedPoint16 
 {
 	public final static int SCALE_BITS = 16;
 	public final static int SCALE = 1<<SCALE_BITS;
 	public final static int SCALE_MASK = SCALE-1;
 	public int value;
 	
-	public FixedPoint()
+	public FixedPoint16()
 	{
 		value = 0;
 	}
 	
-	public FixedPoint(float n)
+	public FixedPoint16(float n)
 	{
 		setFromFloat(n);
 	}
 
-	public FixedPoint(int n)
+	public FixedPoint16(int n)
 	{
 		setFromInt(n);
 	}
@@ -47,31 +47,31 @@ public class FixedPoint
 		return value>>SCALE_BITS;
 	}
 	
-	public final FixedPoint multiplyInt(int n)
+	public final FixedPoint16 multiplyInt(int n)
 	{
 		 value *= n;
 		 return this;
 	}
 	
-	public final FixedPoint add(FixedPoint fp)
+	public final FixedPoint16 add(FixedPoint16 fp)
 	{
 		value += fp.value;
 		return this;
 	}
 
-	public final FixedPoint subtract(FixedPoint fp)
+	public final FixedPoint16 subtract(FixedPoint16 fp)
 	{
 		value -= fp.value;
 		return this;
 	}
 	
-	public final FixedPoint multiply(FixedPoint fp)
+	public final FixedPoint16 multiply(FixedPoint16 fp)
 	{
 		value = (int)(((long)value)*fp.value >> SCALE_BITS);
 		return this;
 	}
 	
-	public final FixedPoint divide(FixedPoint fp)
+	public final FixedPoint16 divide(FixedPoint16 fp)
 	{
 		value = (int)(((long)value << SCALE_BITS)/fp.value);
 		return this;

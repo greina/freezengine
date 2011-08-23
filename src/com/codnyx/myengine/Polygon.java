@@ -7,6 +7,7 @@ public class Polygon
 	Vertex[] vertices;
 	float[] normal = {0,0,0};
 	float[] center = {0,0,0};
+	public Texture texture;
 	
 	public Polygon(Vertex[] vertices)
 	{
@@ -57,7 +58,8 @@ public class Polygon
 
 		MyMath.subtract(vertices[1].point, vertices[0].point, vec1);
 		MyMath.subtract(vertices[2].point, vertices[1].point, vec2);
-		
+
 		MyMath.crossProduct(vec1, vec2, this.normal);
+		MyMath.normalize(this.normal);
 	}
 }
