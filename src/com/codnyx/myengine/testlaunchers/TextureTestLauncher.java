@@ -13,7 +13,7 @@ import javax.swing.JFrame;
 import com.codnyx.myengine.Mesh;
 import com.codnyx.myengine.ObjParser;
 import com.codnyx.myengine.Polygon;
-import com.codnyx.myengine.Texture;
+import com.codnyx.myengine.VertexTexture;
 
 
 
@@ -47,10 +47,10 @@ public class TextureTestLauncher extends Launcher
 			float[][] coords1 = {{scale, 0.0f}, {0.0f, 0.0f}, {0.0f, scale}};
 			float[][] coords2 = {{scale, 0.0f}, {0.0f, scale}, {scale,scale}};
 			Polygon p = this.m.polygons.get(0);
-			Texture t = new Texture(image, p, coords1);
+			VertexTexture t = new VertexTexture(image, p, coords1);
 			p.texture = t;
 			p = this.m.polygons.get(1);
-			t = new Texture(image, p, coords2);
+			t = new VertexTexture(image, p, coords2);
 			p.texture = t;
 			BufferedImage image2 = ImageIO.read(getClass().getResourceAsStream("/texture2.jpg"));
 			if(image2.getType() != BufferedImage.TYPE_INT_ARGB)
@@ -66,10 +66,10 @@ public class TextureTestLauncher extends Launcher
 			float[][] coords4 = {{scale,scale}, {0.0f,0.0f}, {scale, 0.0f}};
 
 			p = this.m.polygons.get(2);
-			t = new Texture(image2, p, coords3);
+			t = new VertexTexture(image2, p, coords3);
 			p.texture = t;
 			p = this.m.polygons.get(3);
-			t = new Texture(image2, p, coords4);
+			t = new VertexTexture(image2, p, coords4);
 			p.texture = t;
 			
 		} catch (IOException e) {

@@ -26,7 +26,7 @@ public class ObjTestLauncher extends Launcher
 	
 	protected void init()
 	{
-			InputStream stream = this.getClass().getResourceAsStream("/lamp.obj");
+			InputStream stream = this.getClass().getResourceAsStream("/cow.obj");
 			try {
 				this.m = new ObjParser().parseStream(new BufferedReader(new InputStreamReader(stream)));
 			} catch (IOException e) {

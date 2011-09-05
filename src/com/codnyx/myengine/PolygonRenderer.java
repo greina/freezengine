@@ -283,9 +283,8 @@ public class PolygonRenderer
 						// Compute w = VecBuffer
 						MyMath.init(-1,vecBuffer);
 						this.projT.aTrasform(x,y, vecBuffer);
-						float one_overNW = 1/MyMath.dotProduct(vecBuffer, tnormal);
 						// Compute P -> VecBuffer
-						MyMath.scale(one_overNW*MyMath.dotProduct(tnormal, to), vecBuffer, vecBuffer);
+						MyMath.scale(MyMath.dotProduct(tnormal, to)/MyMath.dotProduct(vecBuffer, tnormal), vecBuffer, vecBuffer);
 						// VecBuffer = P-O
 						MyMath.subtract(vecBuffer, to, vecBuffer);
 	
