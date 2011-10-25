@@ -3,7 +3,7 @@ package com.codnyx.myengine;
 import java.awt.Color;
 
 public class Vertex {
-	float[] point;
+	public float[] point = {0,0,0};
 	float[] normal;
 	int[] projection = {0,0};
 	Color color = Color.white;
@@ -12,7 +12,6 @@ public class Vertex {
 	
 	public Vertex()
 	{
-		projection = new int[2];
 	}
 	
 	public Vertex(float[] point)
@@ -36,6 +35,21 @@ public class Vertex {
 	{
 		this(point);
 		this.color = color;
+	}
+
+	public Vertex(Vertex vertex)
+	{
+		setTo(vertex);		
+	}
+
+	public void setTo(Vertex v)
+	{
+		this.color = v.color;
+		this.depth = v.depth;
+		this.normal = v.normal.clone();
+		this.point = v.normal.clone();
+		this.tnormal = v.tnormal.clone();
+		this.projection = v.projection.clone();
 	}
 	
 	

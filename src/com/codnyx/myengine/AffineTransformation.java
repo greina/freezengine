@@ -49,11 +49,12 @@ public class AffineTransformation {
 	
 	public float[] transform(float[] point, float[] result)
 	{
+		float x = point[0];
+		float y = point[1];
+		float z = point[2];
 		for(int i = 0; i < 3; i++)
 		{
-			result[i] = m[i*4+3];
-			for(int j = 0; j < 3; j++)
-				result[i] += point[j]*m[i*4+j];
+			result[i] = m[i*4+3] + x*m[i*4+0] + y*m[i*4+1]+ z*m[i*4+2];
 		}
 		return result;
 	}
