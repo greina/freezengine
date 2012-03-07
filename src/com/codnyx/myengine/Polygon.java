@@ -29,7 +29,7 @@ public class Polygon
 		setPNormalToVertices();
 		for(Vertex c:this.vertices)
 		{
-			c.color = color;
+			c.color = color.getRGB();
 		}
 	}
 	
@@ -61,5 +61,15 @@ public class Polygon
 
 		MyMath.crossProduct(vec1, vec2, this.normal);
 		MyMath.normalize(this.normal);
+	}
+
+	public float[] getCenter()
+	{
+		return center;
+	}
+	
+	public float[] getNormal()
+	{
+		return normal;
 	}
 }
