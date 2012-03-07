@@ -1,14 +1,13 @@
 package com.codnyx.myengine;
 
 import java.awt.Color;
+import java.util.Arrays;
 
 public class Vertex {
 	public float[] point = {0,0,0};
 	float[] normal;
-	int[] projection = {0,0};
-	Color color = Color.white;
-	float[] tnormal = {0,0,0};
-	public float depth;
+	public static final int COLOR_WHITE = Color.white.getRGB() ;
+	int color = COLOR_WHITE;
 	
 	public Vertex()
 	{
@@ -28,13 +27,13 @@ public class Vertex {
 	public Vertex(float[] point, float[] normal, Color color)
 	{
 		this(point, normal);
-		this.color = color;
+		this.color = color.getRGB();
 	}
 	
 	public Vertex(float[] point, Color color)
 	{
 		this(point);
-		this.color = color;
+		this.color = color.getRGB();
 	}
 
 	public Vertex(Vertex vertex)
@@ -45,13 +44,17 @@ public class Vertex {
 	public void setTo(Vertex v)
 	{
 		this.color = v.color;
-		this.depth = v.depth;
-		this.normal = v.normal.clone();
-		this.point = v.normal.clone();
-		this.tnormal = v.tnormal.clone();
-		this.projection = v.projection.clone();
+		this.normal = v.normal != null?v.normal.clone():null;
+		this.point = v.point.clone();
 	}
 	
+	public void reset()
+	{
+		Arrays.fill(point, 0);
+		if(normal != null)
+			normal = null;
+		color = COLOR_WHITE;		
+	}
 	
 	
 }
