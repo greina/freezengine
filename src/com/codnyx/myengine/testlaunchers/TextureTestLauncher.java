@@ -102,7 +102,7 @@ public class TextureTestLauncher extends Launcher
 	{
 		int width = 1000;
 		int height = 750;
-		TextureTestLauncher main = new TextureTestLauncher(Math.PI/4.0, -1f, -30.0f, width, height);
+		TextureTestLauncher main = new TextureTestLauncher(Math.PI/4.0, -30f, -1f, width, height);
 		main.setSize(width, height);
 		main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		main.setVisible(true);

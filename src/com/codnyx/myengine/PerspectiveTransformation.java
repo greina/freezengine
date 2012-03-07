@@ -4,6 +4,7 @@ public class PerspectiveTransformation
 {
 	private float a11, a13, a22, a23, a33, a34;
 	private float i11, i13, i22, i23;  
+	private float z_min, z_max;
 	
 	public PerspectiveTransformation(double yangle, int width, int height, int top, int left, float z_min, float z_max)
 	{
@@ -13,13 +14,15 @@ public class PerspectiveTransformation
 		a22 = -a11;
 		a13 = -(left+w_2);
 		a23 = -(top+h_2);
-		w_2 = 1/(z_max - z_min);
-		a33 = -z_max*w_2;
+		w_2 = 1/(z_min - z_max);
+		a33 = -z_min*w_2;
 		a34 = z_max*z_min*w_2;
 		i11 = 1/a11;
 		i13 = -a13/a11;
 		i22 = 1/a22;
 		i23 = -a23/a22;
+		this.z_max = z_max;
+		this.z_min = z_min;
 	}
 	
 	public final float project(float[] eye_coord, int[] result)
@@ -39,12 +42,23 @@ public class PerspectiveTransformation
 	{
 		 result[0] = -z*(i11*screen_coord[0] + i13);
 		 result[1] = -z*(i22*screen_coord[1] + i23);
+		 result[2] = z;
 	}
 
 	public void aTrasform(int x, int y, float[] result) 
 	{
 		 result[0] = (i11*(x+1) - i13);
 		 result[1] = (i22*(y+1) - i23);
+	}
+
+	public float getZMin()
+	{
+		return z_min;
+	}
+	
+	public float getZMax()
+	{
+		return z_max;
 	}
 	
 }

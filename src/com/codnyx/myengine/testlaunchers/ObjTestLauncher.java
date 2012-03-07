@@ -60,7 +60,7 @@ public class ObjTestLauncher extends Launcher
 	{
 		int width = 1000;
 		int height = 750;
-		ObjTestLauncher main = new ObjTestLauncher(Math.PI/4.0, -1f, -30.0f, width, height);
+		ObjTestLauncher main = new ObjTestLauncher(Math.PI/4.0, -30f, -1f, width, height);
 		main.setSize(width, height);
 		main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		main.setVisible(true);

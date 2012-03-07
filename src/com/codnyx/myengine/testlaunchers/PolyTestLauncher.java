@@ -61,7 +61,7 @@ public class PolyTestLauncher extends Launcher
 		angle += angle_step;
 		a.loadIdentity();
 //		a.rotateX(angle);
-		a.rotateY(2*angle);
+		a.rotateY(angle);
 //		a.rotateZ(4*angle);
 		a.translateTo(0,0,ztr);
 
@@ -88,7 +88,7 @@ public class PolyTestLauncher extends Launcher
 	{
 		int width = 1000;
 		int height = 750;
-		PolyTestLauncher main = new PolyTestLauncher(Math.PI/4.0, -1f, -30.0f, width, height);
+		PolyTestLauncher main = new PolyTestLauncher(Math.PI/4.0, -30f, -1f, width, height);
 		main.setSize(width, height);
 		main.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		main.setVisible(true);
