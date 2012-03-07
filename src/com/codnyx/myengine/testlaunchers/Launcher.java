@@ -4,16 +4,21 @@ import java.awt.Graphics;
 import java.awt.GraphicsConfiguration;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.VolatileImage;
 
 import javax.swing.JFrame;
 
 import com.codnyx.myengine.AffineTransformation;
+import com.codnyx.myengine.ColorUtils;
+import com.codnyx.myengine.MyMath;
+import com.codnyx.myengine.Polygon;
 import com.codnyx.myengine.PolygonRenderer;
 
 
 
-public abstract class Launcher extends JFrame implements Runnable, KeyListener{
+public abstract class Launcher extends JFrame implements Runnable, KeyListener, MouseListener{
 	
 	private static final long serialVersionUID = 1L;
 	protected AffineTransformation a;
@@ -30,6 +35,7 @@ public abstract class Launcher extends JFrame implements Runnable, KeyListener{
 		isRunning = true;
 		this.init();
 		this.addKeyListener(this);
+		this.addMouseListener(this);
 		new Thread(Launcher.this).start();
 	}
 	
@@ -103,7 +109,7 @@ public abstract class Launcher extends JFrame implements Runnable, KeyListener{
 				   if(fps > maxfps)
 				   {
 					   maxfps = fps;
-					   System.out.println("Spike " + maxfps);
+//					   System.out.println("Spike " + maxfps);
 				   }
 				   
 				   this.getBufferStrategy().getDrawGraphics().drawImage(volatileImg, 0, 0, this);
@@ -124,7 +130,7 @@ public abstract class Launcher extends JFrame implements Runnable, KeyListener{
 				   if(fps > maxfps)
 				   {
 					   maxfps = fps;
-					   System.out.println("Spike " + maxfps);
+//					   System.out.println("Spike " + maxfps);
 				   }
 				   
 
@@ -159,4 +165,66 @@ public abstract class Launcher extends JFrame implements Runnable, KeyListener{
 	@Override
 	public void keyReleased(KeyEvent e) {
 	}
+	@Override
+	public void mouseEntered(MouseEvent e)
+	{
+	}
+	@Override
+	public void mouseExited(MouseEvent e)
+	{
+	}
+	
+	@Override
+	public void mousePressed(MouseEvent e)
+	{
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent e)
+	{
+	}
+	
+	@Override
+	public void mouseClicked(MouseEvent e)
+	{
+		int x = e.getX();
+		int y = e.getY();
+		renderer.hitTest(x, y, handler);
+	}
+
+	
+	PolygonRenderer.HitTestHandler handler = new PolygonRenderer.HitTestHandler()
+	{
+		int color;
+		float[] coord3D = {Float.NEGATIVE_INFINITY,Float.NEGATIVE_INFINITY,Float.NEGATIVE_INFINITY};
+		int x, y;
+		float depth;
+		@Override
+		public void hit(int x, int y, float depth, int color, Polygon p)
+		{
+			if(p != null)
+			{
+				float[] u = {0,0,0};
+				float[] n = p.getNormal().clone();
+				float[] c = p.getCenter().clone();
+				
+				renderer.getModelT().transform(c);
+				renderer.getModelT().normal_transform(n);
+				
+				MyMath.init(-1,u);
+				renderer.getProjT().aTrasform(x, y, u);				
+
+				MyMath.scale(MyMath.dotProduct(n, c)/MyMath.dotProduct(u, n), u, coord3D);
+			}
+			this.color = color;
+			this.x = x;
+			this.y = y;
+			this.depth = depth;
+		}
+		
+		public void commit() 
+		{
+			System.out.println(String.format("Click on (%d,%d)->(%.3f,%.3f,%.3f): color=rgba-0x%02X%02X%02X%02X depth=%.4f", x,y,coord3D[0], coord3D[1], coord3D[2], ColorUtils.getRed(color), ColorUtils.getGreen(color), ColorUtils.getBlue(color),ColorUtils.getAlpha(color), depth));
+		};
+	};
 }

@@ -1,6 +1,5 @@
 package com.codnyx.myengine;
 
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -21,6 +20,11 @@ public class PolygonRenderer
 	private AffineTransformation modelT;
 	private BufferedImage image;
 	private float[] zBuffer;
+	private ProjectedVertex[] vertices;
+	private int numVertices;
+	private int htx;
+	private int hty;
+	private HitTestHandler handler;
 	
 	public PolygonRenderer(int width, int height)
 	{
@@ -47,6 +51,10 @@ public class PolygonRenderer
 		this.scanLines = new Scan[this.height];
 		for(int i = 0; i < scanLines.length; i++)
 			this.scanLines[i] = new Scan();
+		this.vertices = new ProjectedVertex[8];
+		for(int i = 0; i < vertices.length; i++)
+			this.vertices[i] = new ProjectedVertex();
+		numVertices = 0;
 		this.modelT = new AffineTransformation();
 		this.image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 		this.zBuffer = new float[width*height];
@@ -81,12 +89,25 @@ public class PolygonRenderer
 	
 	public void render(Graphics gc, Polygon p)
 	{
-		float[] tnormal = {0,0,0}, tu = null, tv = null, to = null;
-		int a1,r1,g1,b1,a0,r0,g0,b0,n;
-		a1 = r1 = g1 = b1 = a0 = r0 = g0 = b0 = n = 0;
-		MutableColor colorBuffer = new MutableColor(0);
+		/*
+		 * Variables definition and initialization
+		 */
+		// Transformed normal of the polygon
+		float[] tnormal = {0,0,0};
 		
-		int step_fp;
+		// Texture origin, U and V vector properly transformed
+		float[] tu = null, tv = null, to = null;
+		
+		// Texture coordinates in the image
+		int tx, ty;
+		
+		// ZBuffer values
+		float zb0, zb1;
+		
+		// Loop dumb variables
+		int step_fp, n;
+		n = 0;
+		
 		/*
 		 * Backface culling
 		 */
@@ -110,6 +131,11 @@ public class PolygonRenderer
 			modelT.normal_transform(tv);
 		}
 		
+		frustumClipping(p.vertices, projT.getZMin(), projT.getZMax());
+		
+		
+		if(numVertices == 0)
+			return;
 		
 		/*
 		 * Rendering
@@ -118,46 +144,29 @@ public class PolygonRenderer
 		int[] p0;
 		int i = 0;
 		
-		modelT.transform(p.vertices[i].point,vecBuffer);
-		p.vertices[i].depth = projT.project(vecBuffer, p.vertices[i].projection);
-		modelT.normal_transform(p.vertices[i].normal, p.vertices[i].tnormal);
+		this.vertices[i].depth = projT.project(this.vertices[i].point, this.vertices[i].projection);
 		i++;
 		
 		/*
 		 * Scan all the edges in the polygon
 		 */
-		for(; i <= p.vertices.length; i++)
+		for(; i <= numVertices; i++)
 		{
-			Vertex cur = p.vertices[i%p.vertices.length];
-			Vertex prev = p.vertices[i-1];
-			if(cur != p.vertices[0])
-			{
-				modelT.transform(cur.point,vecBuffer);
-				cur.depth = projT.project(vecBuffer, cur.projection);
-				modelT.normal_transform(cur.normal, cur.tnormal);
-			}
-
-			int yy = prev.projection[1];
-			yy = yy>=0?(yy<height?yy:(height-1)):0;
-			int xx = prev.projection[0];
-			xx = xx>=0?(xx<width?xx:(width-1)):0;
-			float zb0 = zBuffer[yy*width+xx];
+			ProjectedVertex cur = this.vertices[i%numVertices];
+			ProjectedVertex prev = this.vertices[i-1];
 			
-			yy = cur.projection[1];
-			yy = yy>=0?(yy<height?yy:(height-1)):0;
-			xx = cur.projection[0];
-			xx = xx>=0?(xx<width?xx:(width-1)):0;
-			float zb1 = zBuffer[yy*width+xx];
+			cur.depth = projT.project(cur.point, cur.projection);
 			
 			zb0 = prev.depth;
 			zb1 = cur.depth;
+			
 			// Modify y bounds to include the new vertices
 			correctYBounds(cur);
 			correctYBounds(prev);
 			
 			int y_start, y_end;
-			Vertex c0;
-			Vertex c1;
+			ProjectedVertex c0;
+			ProjectedVertex c1;
 			if(cur.projection[1] > prev.projection[1])
 			{
 				c0 = prev;
@@ -180,19 +189,6 @@ public class PolygonRenderer
 			int m_fp = FixedPoint16.FromFloat(((float)p1[0] - p0[0])/((float)p1[1] - p0[1]));
 			n = y_end-y_start+1;
 			step_fp = FixedPoint16.FromFloat(1.0f/n);
-			
-			if(!textureEnabled)
-			{
-				a1 = c1.color.getAlpha();
-				r1 = c1.color.getRed();
-				g1 = c1.color.getGreen();
-				b1 = c1.color.getBlue();
-	
-				a0 = c0.color.getAlpha();
-				r0 = c0.color.getRed();
-				g0 = c0.color.getGreen();
-				b0 = c0.color.getBlue();
-			}
 
 			if(p1[1] == p0[1])
 			{
@@ -214,6 +210,7 @@ public class PolygonRenderer
 				int dx = p0[0] - p1[0];
 				int dy = p0[1] - p1[1];
 				float dd = (zb1 - zb0)/(dx*dx + dy*dy);
+				
 				for(int y = y_start>0?y_start:0; y <= y_end && y < scanLines.length; y++)
 				{
 					int x = FixedPoint16.ToInt(m_fp*(y-p0[1]))+p0[0];
@@ -222,7 +219,7 @@ public class PolygonRenderer
 					float zb = zb0 + dd*(dx*dx + dy*dy);
 					if(!textureEnabled)
 						scanLines[y].touch(x,
-								interpolateColor(colorBuffer, y-y_start,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, c0.color, c1.color), zb);
+								interpolateColor(y-y_start,n,step_fp, c0.color, c1.color), zb);
 					else
 						scanLines[y].touch(x, zb);
 				}
@@ -235,36 +232,32 @@ public class PolygonRenderer
 		{
 			scan = scanLines[y];
 
-			if(scan.min < xMinBound)
-				xMinBound = scan.min;
-			if(scan.max > xMaxBound)
-				xMaxBound = scan.max;
+			if(scan.x0 < xMinBound)
+				xMinBound = scan.x0;
+			if(scan.x1 > xMaxBound)
+				xMaxBound = scan.x1;
 			
 			if(!textureEnabled)
 			{
-				n = scan.max-scan.min+1;
+				n = scan.x1-scan.x0+1;
 				step_fp = FixedPoint16.FromFloat(1.0f/n);
-				a1 = scan.max_color.getAlpha();
-				r1 = scan.max_color.getRed();
-				g1 = scan.max_color.getGreen();
-				b1 = scan.max_color.getBlue();
-	
-				a0 = scan.min_color.getAlpha();
-				r0 = scan.min_color.getRed();
-				g0 = scan.min_color.getGreen();
-				b0 = scan.min_color.getBlue();
-				
 				float zstep = scan.computeZStep();
 	
-				for(int x = scan.min; x <= scan.max; x++)
+				int x = scan.x0;
+				x = x < 0?0:x;
+				int end = scan.x1;
+				end = end >= width?(width-1):end;
+				for( ; x <= end; x++)
 				{
-					if(y < 0 || y >= height || x < 0 || x >= width)
+					if(y < 0 || y >= height)
 						continue;
-					float zb = scan.minzb + zstep*(x-scan.min)*(x-scan.min);
-					if(zb <= zBuffer[y*width+x])
+					float zb = scan.depth0 + zstep*(x - scan.x0);
+					if(zb < zBuffer[y*width+x])
 					{
-						data[y*width + x] = interpolateColor(colorBuffer, x-scan.min,n,step_fp,r0,r1,g0,g1,b0,b1, a0, a1, scan.min_color, scan.max_color).getRGB();
+						data[y*width + x] = interpolateColor(x-scan.x0,n,step_fp, scan.min_color, scan.max_color);
 						zBuffer[y*width+x] = zb;
+						if(handler != null && x == htx && y == hty)
+							handler.hit(x, y, zb, data[y*width + x], p);
 					}
 				}
 			}
@@ -272,12 +265,17 @@ public class PolygonRenderer
 			{
 
 				float zstep = scan.computeZStep();
-				for(int x = scan.min; x <= scan.max; x++)
+
+				int x = scan.x0;
+				x = x < 0?0:x;
+				int end = scan.x1;
+				end = end >= width?(width-1):end;
+				for( ; x <= end; x++)
 				{
-					if(y < 0 || y >= height || x < 0 || x >= width)
+					if(y < 0 || y >= height)
 						continue;
 
-					float zb = scan.minzb + zstep*(x-scan.min)*(x-scan.min);
+					float zb = scan.depth0 + zstep*(x-scan.x0);
 					if(zb <= zBuffer[y*width+x])
 					{
 						// Compute w = VecBuffer
@@ -290,10 +288,12 @@ public class PolygonRenderer
 	
 						float c1 = MyMath.dotProduct(vecBuffer, tu);
 						float c2 = MyMath.dotProduct(vecBuffer, tv);
-						a0 = (int) (c1*p.texture.u[0] + c2*p.texture.v[0] + p.texture.o[0]);
-						a1 = (int) (c1*p.texture.u[1] + c2*p.texture.v[1] + p.texture.o[1]);
-						data[y*width + x] = p.texture.getColor(a0, a1);
+						tx = (int) (c1*p.texture.u[0] + c2*p.texture.v[0] + p.texture.o[0]);
+						ty = (int) (c1*p.texture.u[1] + c2*p.texture.v[1] + p.texture.o[1]);
+						data[y*width + x] = p.texture.getColor(tx, ty);
 						zBuffer[y*width+x] = zb;
+						if(handler != null && x == htx && y == hty)
+							handler.hit(x, y, zb, data[y*width + x], p);
 					}
 				}
 			}
@@ -309,21 +309,34 @@ public class PolygonRenderer
 			
 	}
 
-	private final static Color interpolateColor(MutableColor colorBuffer, int i, int n, int oneovern_fp, int r0, int r1, int g0,
-			int g1, int b0, int b1, int a0, int a1, Color c1, Color c2)
-	{
+	private final static int interpolateColor(int i, int n, int oneovern_fp, int color_0, int color_1)
+	{		
 		int h = i*oneovern_fp;
 		int l = (n-i)*oneovern_fp;
-		int a = FixedPoint16.ToInt(l*a0 + h*a1);
-		int r = FixedPoint16.ToInt(l*r0 + h*r1);
-		int g = FixedPoint16.ToInt(l*g0 + h*g1);
-		int b = FixedPoint16.ToInt(l*b0 + h*b1);
+		int a = FixedPoint16.ToInt(l*ColorUtils.getAlpha(color_0) + h*ColorUtils.getAlpha(color_1));
+		int r = FixedPoint16.ToInt(l*ColorUtils.getRed(color_0) + h*ColorUtils.getRed(color_1) );
+		int g = FixedPoint16.ToInt(l*ColorUtils.getGreen(color_0)  + h*ColorUtils.getGreen(color_1));
+		int b = FixedPoint16.ToInt(l*ColorUtils.getBlue(color_0) + h*ColorUtils.getBlue(color_1));
 		
-		colorBuffer.setRGBA(r,g,b,a);
-		return colorBuffer;
+		
+		return ColorUtils.getRGB(a, r, g, b);
+	}
+	
+
+	private final static int interpolateColor(int color_0, int color_1, float t)
+	{		
+		float l = (1-t);
+		float h = t;
+		int a = (int) (l*ColorUtils.getAlpha(color_0) + h*ColorUtils.getAlpha(color_1));
+		int r = (int) (l*ColorUtils.getRed(color_0) + h*ColorUtils.getRed(color_1)) ;
+		int g = (int) (l*ColorUtils.getGreen(color_0)  + h*ColorUtils.getGreen(color_1));
+		int b = (int) (l*ColorUtils.getBlue(color_0) + h*ColorUtils.getBlue(color_1));
+		
+		
+		return ColorUtils.getRGB(a, r, g, b);
 	}
 
-	private final void correctYBounds(Vertex v) 
+	private final void correctYBounds(ProjectedVertex v) 
 	{
 		int y = v.projection[1];
 		y = y>0?y:0;
@@ -344,20 +357,236 @@ public class PolygonRenderer
 
 	public void commit(Graphics g) 
 	{
+		if(handler != null)
+		{
+			handler.commit();
+			handler = null;
+		}
 		g.drawImage(image, bounds[0], bounds[1], bounds[2], bounds[3], bounds[0], bounds[1], bounds[2], bounds[3], observer);
 	}
 	
+	public void hitTest(int x, int y, HitTestHandler handler)
+	{
+		this.htx = x;
+		this.hty = y;
+		this.handler = handler;
+	}
+	
+	private final void frustumClipping(Vertex[] vs, float zMin, float zMax)
+	{
+		if(vs.length + 1 > vertices.length)
+			expandVertexArray(vs.length + 1);
+		
+		numVertices = 0;
+		
+		int exit = -1;
+		int enter = -1;
+		int inVertices = 0;
+		
+		boolean wasIn = false;
+		boolean firstIn = false;
+		boolean isIn = false;
+		
+		for(int i = 0; i < vs.length; i++)
+		{
+			vertices[i].setTo(vs[i]);
+			modelT.transform(vertices[i].point,vertices[i].point);
+			modelT.normal_transform(vertices[i].normal, vertices[i].normal);
+			isIn = vertices[i].point[2] >= zMin;
+			if (i == 0)
+				firstIn = isIn;
+			else
+			{
+				if(wasIn && !isIn)
+					exit = i - 1;
+				if(isIn && !wasIn)
+					enter = i - 1 ;
+			}
+			if(isIn)
+				inVertices++;
+			
+			wasIn =  isIn;
+			
+		}
+		
+		if(wasIn && !firstIn)
+			exit = vs.length-1;
+		if(firstIn && !wasIn)
+			enter = vs.length-1;
+		
+		if(inVertices > 0)
+		{
+			numVertices = vs.length;			
+		}
+		else
+		{
+			numVertices = 0;
+			return;
+		}
+		
+		if(enter != -1 || exit != -1)
+		{
+			/*
+			 * Clip all the vertices greater than zMin 
+			 */
+			clip(enter, exit, zMin, firstIn);
+			
+			if(numVertices == 0)
+				return;
+		}
+			
+		
+		/*
+		 * Check enter and exit point from the plane zMax
+		 */
+		inVertices = 0;
+		enter = -1;
+		exit = -1;
+		for(int i = 0; i < numVertices; i++)
+		{
+			
+			isIn = vertices[i].point[2]  <= zMax;
+			if (i == 0)
+				firstIn = isIn;
+			else
+			{
+				if(wasIn && !isIn)
+					exit = i - 1;
+				if(isIn && !wasIn)
+					enter = i - 1;
+			}
 
+			if(isIn)
+				inVertices++;
+			wasIn =  isIn;
+		}
+		
+		if(wasIn && !firstIn)
+			exit = vs.length-1;
+		if(firstIn && !wasIn)
+			enter = vs.length-1;
+		
+		if(inVertices == 0)
+		{
+			numVertices = 0;
+			return;
+		}
+		
+		if(enter == -1 && exit == -1)	return;
+		
+		clip(enter, exit, zMax, firstIn);
+		
+	}
+	
+	private final void clip(int enter, int exit, float zPlane, boolean firstIn)
+	{
+		boolean isIn = firstIn;
+		
+		for(int i = 0; i < numVertices; i++)
+		{
+			ProjectedVertex cur = vertices[i];
+			ProjectedVertex next = vertices[(i+1)%numVertices];
+			if(i == enter)
+			{
+				interpolatePoints(cur, next, zPlane);
+				isIn = true;
+			}
+			else if (i == exit)
+			{
+				if(i+1 == enter)
+				{
+					/*
+					 * Here we need to add a new vertex
+					 */
+					
+					// Shift the vector array to the right
+					for(int j = numVertices; j > i; j--)
+						vertices[j].setTo(vertices[j-1]);
+					numVertices++;
+				}
+				interpolatePoints(next,cur, zPlane);
+			}
+			else
+			{
+				if(!isIn && (i != 0 || (i == 0 && exit != numVertices -1)))
+				{
+					/*
+					 * Shift all the vector array to the left
+					 */
+					for(int j = i; j < numVertices; j++)
+						vertices[j].setTo(vertices[j+1]);
+
+					if(enter > i)
+						enter--;
+					if(exit > i)
+						exit--;
+					i--;
+					numVertices--;
+				}
+			}
+		}	
+	}
+	
+	
+	private final void interpolatePoints(ProjectedVertex p0, ProjectedVertex p1, float zPlane)
+	{
+		float[] buffer = {0,0,0};
+		/*
+		 * First interpolate the point
+		 */
+		// t = -z0 / (z1 - z0)
+		float t = (zPlane-p0.point[2])/(p1.point[2]-p0.point[2]);
+		// Q = P0 + t*(P1-P0)
+		MyMath.subtract(p1.point, p0.point, buffer);
+		MyMath.scale(t, buffer, buffer);
+		MyMath.add(p0.point, buffer, p0.point);
+		/*
+		 * ..then the normal
+		 */
+		if(p0.normal != null && p1.normal != null)
+		{
+			// N = N0 + t*(N1-N0)
+			MyMath.subtract(p1.normal, p0.normal, buffer);
+			MyMath.scale(t, buffer, buffer);
+			MyMath.add(p0.normal, buffer, p0.normal);
+		}
+		/*
+		 * ...finally the color
+		 */
+		if(p0.color != p1.color)
+			p0.color = interpolateColor(p0.color, p1.color, t);
+	}
+	
+	private final void expandVertexArray(int requiredSize)
+	{
+		ProjectedVertex[] oldArray = this.vertices;
+		int newSize = this.vertices.length*2;
+		while(newSize < requiredSize)
+			newSize *= 1;
+		
+		this.vertices = new ProjectedVertex[newSize];
+		for(int i = 0; i < oldArray.length; i++)
+			this.vertices[i] = oldArray[i];
+		for(int i = oldArray.length; i < this.vertices.length; i++)
+			this.vertices[i] = new ProjectedVertex();
+	}
+	
+	public static interface HitTestHandler
+	{
+		public void hit(int x, int y, float z, int color, Polygon p);
+		public void commit();
+	}
+	
 }
 
 class Scan
 {
-	int min;
-	int max;
-	float minzb;
-	float maxzb;
-	MutableColor max_color = new MutableColor(0);
-	MutableColor min_color = new MutableColor(0);
+	int x0;
+	int x1;
+	float depth0;
+	float depth1;
+	int  max_color = 0;
+	int min_color = 0;
 	
 	public Scan()
 	{
@@ -366,42 +595,42 @@ class Scan
 	
 	public float computeZStep() 
 	{
-		return (maxzb - minzb)/((min-max)*(min-max)); 
+		return (depth1-depth0)/(x1-x0);
 	}
 
 	public void touch(int x, float zb)
 	{
-		if(x > max)
+		if(x > x1)
 		{
-			max = x;
-			maxzb = zb;
+			x1 = x;
+			depth1 = zb;
 		}
-		if(x < min)
+		if(x < x0)
 		{
-			min = x;
-			minzb = zb;
+			x0 = x;
+			depth0 = zb;
 		}
 	}
 
-	void touch(int x, Color color, float zb)
+	void touch(int x, int color, float zb)
 	{
-		if(x > max)
+		if(x > x1)
 		{
-			max = x;
-			max_color.setRGBA(color.getRGB());
-			maxzb = zb;
+			x1 = x;
+			max_color = color;
+			depth1 = zb;
 		}
-		if(x < min)
+		if(x < x0)
 		{
-			min = x;
-			min_color.setRGBA(color.getRGB());
-			minzb = zb;
+			x0 = x;
+			min_color = color;
+			depth0 = zb;
 		}
 	}
 	
 	void reset()
 	{
-		this.min = Integer.MAX_VALUE;
-		this.max = Integer.MIN_VALUE;
+		this.x0 = Integer.MAX_VALUE;
+		this.x1 = Integer.MIN_VALUE;
 	}
 }
