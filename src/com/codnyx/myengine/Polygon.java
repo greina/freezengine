@@ -4,9 +4,9 @@ import java.awt.Color;
 
 public class Polygon 
 {
-	Vertex[] vertices;
-	float[] normal = {0,0,0};
-	float[] center = {0,0,0};
+	protected Vertex[] vertices;
+	protected float[] normal = {0,0,0};
+	protected float[] center = {0,0,0};
 	public Texture texture;
 	
 	public Polygon(Vertex[] vertices)
@@ -71,5 +71,10 @@ public class Polygon
 	public float[] getNormal()
 	{
 		return normal;
+	}
+
+	public Vertex[] getVertices()
+	{
+		return vertices;
 	}
 }
