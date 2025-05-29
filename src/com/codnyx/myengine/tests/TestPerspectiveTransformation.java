@@ -55,14 +55,16 @@ public class TestPerspectiveTransformation {
         assertEquals("z_max", zMax, getPrivateField(pt, "z_max"), DELTA);
         
         // Check inverse components as well
+        // With a11 = 300, a13 = -400:
         // i11 = 1.0f / a11 = 1.0f / 300.0f
-        // i13 = -a13 / a11 = -(-400.0f) / 300.0f = 400.0f / 300.0f = 4.0f / 3.0f
+        // i13 = a13 / a11 = -400.0f / 300.0f = -4.0f / 3.0f
+        // With a22 = -300, a23 = -300:
         // i22 = 1.0f / a22 = 1.0f / -300.0f
-        // i23 = -a23 / a22 = -(-300.0f) / -300.0f = -1.0f
+        // i23 = a23 / a22 = -300.0f / -300.0f = 1.0f
         assertEquals("i11", 1.0f / 300.0f, getPrivateField(pt, "i11"), DELTA);
-        assertEquals("i13", 4.0f / 3.0f, getPrivateField(pt, "i13"), DELTA);
+        assertEquals("i13", -4.0f / 3.0f, getPrivateField(pt, "i13"), DELTA); // Corrected expected value
         assertEquals("i22", 1.0f / -300.0f, getPrivateField(pt, "i22"), DELTA);
-        assertEquals("i23", -1.0f, getPrivateField(pt, "i23"), DELTA);
+        assertEquals("i23", 1.0f, getPrivateField(pt, "i23"), DELTA); // Corrected expected value
     }
 
     @Test
@@ -184,16 +186,17 @@ public class TestPerspectiveTransformation {
     public void testATrasform() throws Exception {
         // This method's exact geometric meaning is a bit unclear from the code alone.
         // It calculates: result[0] = (i11 * (x + 1) - i13); result[1] = (i22 * (y + 1) - i23);
+        // The test should use the corrected i13 and i23 values.
         double fovYRadians = Math.toRadians(90.0);
         int width = 800; int height = 600;
         int top = 0; int left = 0;
         float zMin = 1.0f; float zMax = 100.0f;
         PerspectiveTransformation pt = new PerspectiveTransformation(fovYRadians, width, height, top, left, zMin, zMax);
 
-        float i11 = getPrivateField(pt, "i11"); // 1/300
-        float i13 = getPrivateField(pt, "i13"); // 4/3
-        float i22 = getPrivateField(pt, "i22"); // -1/300
-        float i23 = getPrivateField(pt, "i23"); // -1
+        float i11 = 1.0f / 300.0f; 
+        float i13 = -4.0f / 3.0f; // Corrected i13
+        float i22 = -1.0f / 300.0f;
+        float i23 = 1.0f;         // Corrected i23
 
         int x = 100;
         int y = 200;

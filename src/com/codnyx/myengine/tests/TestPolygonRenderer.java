@@ -278,7 +278,7 @@ public class TestPolygonRenderer {
         Vertex v2 = new Vertex(new float[]{ 1f, -1f, -1f});
         Vertex v3 = new Vertex(new float[]{ 0f,  1f, -1f});
         Polygon poly = new Polygon(new Vertex[]{v1,v2,v3});
-        poly.getVertices()[0].color = Color.GREEN.getRGB(); // Give it a color
+        poly.getVertices()[0].setColor(Color.GREEN); // Give it a color
 
         MockHitTestHandler mockHandler = new MockHitTestHandler();
         renderer.hitTest(5, 5, mockHandler); // Hit test for pixel (5,5)
@@ -310,9 +310,9 @@ public class TestPolygonRenderer {
         v3 = new Vertex(new float[]{ 0.0f,  0.5f, -1f});
         poly = new Polygon(new Vertex[]{v1,v2,v3});
         // Change one vertex color to check if it's interpolated/used
-        poly.getVertices()[0].color = ColorUtils.getRGB(255, 255, 0, 0); // Opaque Red
-        poly.getVertices()[1].color = ColorUtils.getRGB(255, 0, 255, 0); // Opaque Green
-        poly.getVertices()[2].color = ColorUtils.getRGB(255, 0, 0, 255); // Opaque Blue
+        poly.getVertices()[0].setColor(new Color(ColorUtils.getRGB(255, 255, 0, 0), true)); // Opaque Red
+        poly.getVertices()[1].setColor(new Color(ColorUtils.getRGB(255, 0, 255, 0), true)); // Opaque Green
+        poly.getVertices()[2].setColor(new Color(ColorUtils.getRGB(255, 0, 0, 255), true)); // Opaque Blue
 
         renderer.render(Mockito.mock(Graphics.class), poly);
         

@@ -104,7 +104,7 @@ public class TestPolygon {
 
         assertEquals("Number of vertices", 3, p.getVertices().length);
         assertFloatArrayEquals("V0 point", points[0], p.getVertices()[0].point, DELTA);
-        assertEquals("V0 color", c.getRGB(), p.getVertices()[0].color);
+        assertEquals("V0 color", c.getRGB(), p.getVertices()[0].getRGBColor());
         
         // Normal: (0,0,1) as per previous test
         assertFloatArrayEquals("Normal should be computed (0,0,1)", new float[]{0f, 0f, 1f}, p.getNormal(), DELTA);
@@ -113,8 +113,8 @@ public class TestPolygon {
 
         // Check if setPNormalToVertices was effective
         for (Vertex v : p.getVertices()) {
-            assertNotNull("Vertex normal should not be null after setPNormalToVertices", v.normal);
-            assertFloatArrayEquals("Vertex normal should match polygon normal", p.getNormal(), v.normal, DELTA);
+            assertNotNull("Vertex normal should not be null after setPNormalToVertices", v.getNormal());
+            assertFloatArrayEquals("Vertex normal should match polygon normal", p.getNormal(), v.getNormal(), DELTA);
         }
     }
 
@@ -126,13 +126,13 @@ public class TestPolygon {
         Vertex v3 = new Vertex(new float[]{0f, 1f, 0f});
         Polygon p = new Polygon(new Vertex[]{v1, v2, v3}); // Normal is (0,0,1)
 
-        // Clear vertex normals first if they were set by constructor's call to setPNormalToVertices (which it doesn't for Vertex[] constructor)
-        for(Vertex v : p.getVertices()) v.normal = null; 
+        // Clear vertex normals first
+        for(Vertex v : p.getVertices()) v.setNormal(null); 
         
         p.setPNormalToVertices();
         for (Vertex v : p.getVertices()) {
-            assertNotNull("Vertex normal should not be null", v.normal);
-            assertFloatArrayEquals("Vertex normal should be polygon normal", p.getNormal(), v.normal, DELTA);
+            assertNotNull("Vertex normal should not be null", v.getNormal());
+            assertFloatArrayEquals("Vertex normal should be polygon normal", p.getNormal(), v.getNormal(), DELTA);
         }
     }
 

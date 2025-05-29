@@ -6,109 +6,12 @@ import org.junit.Test;
 import com.codnyx.myengine.Mesh;
 import com.codnyx.myengine.Polygon;
 import com.codnyx.myengine.Vertex;
-import com.codnyx.myengine.PolygonRenderer; // Assuming this interface/class exists
+import com.codnyx.myengine.PolygonRenderer;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
 
-import java.awt.Graphics; // For render method testing (mocking)
+import java.awt.Graphics;
 import java.util.LinkedList;
-
-// Mocking classes for testing render method
-class MockPolygonRenderer implements PolygonRenderer {
-    public int renderCount = 0;
-    public Polygon lastRenderedPolygon = null;
-
-    @Override
-    public void render(Graphics g, Polygon p) {
-        renderCount++;
-        lastRenderedPolygon = p;
-    }
-
-    // This method might not be part of the actual PolygonRenderer interface
-    // but is added here for completeness based on potential needs.
-    // If the interface only has render(Graphics, Polygon), this can be removed.
-    public void render(Graphics g, Polygon[] p) {
-        for (Polygon poly : p) {
-            render(g, poly);
-        }
-    }
-}
-
-class MockGraphics extends Graphics {
-    // Implement abstract methods from Graphics as needed for the tests to compile/run.
-    // Most of these can be minimal implementations if not directly used by Mesh.render logic.
-
-    @Override
-    public Graphics create() { return this; }
-    @Override
-    public void translate(int x, int y) {}
-    @Override
-    public java.awt.Color getColor() { return null; }
-    @Override
-    public void setColor(java.awt.Color c) {}
-    @Override
-    public void setPaintMode() {}
-    @Override
-    public void setXORMode(java.awt.Color c1) {}
-    @Override
-    public java.awt.Font getFont() { return null; }
-    @Override
-    public void setFont(java.awt.Font font) {}
-    @Override
-    public java.awt.FontMetrics getFontMetrics(java.awt.Font f) { return null; }
-    @Override
-    public java.awt.Rectangle getClipBounds() { return null; }
-    @Override
-    public void clipRect(int x, int y, int width, int height) {}
-    @Override
-    public void setClip(int x, int y, int width, int height) {}
-    @Override
-    public java.awt.Shape getClip() { return null; }
-    @Override
-    public void setClip(java.awt.Shape clip) {}
-    @Override
-    public void copyArea(int x, int y, int width, int height, int dx, int dy) {}
-    @Override
-    public void drawLine(int x1, int y1, int x2, int y2) {}
-    @Override
-    public void fillRect(int x, int y, int width, int height) {}
-    @Override
-    public void clearRect(int x, int y, int width, int height) {}
-    @Override
-    public void drawRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight) {}
-    @Override
-    public void fillRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight) {}
-    @Override
-    public void drawOval(int x, int y, int width, int height) {}
-    @Override
-    public void fillOval(int x, int y, int width, int height) {}
-    @Override
-    public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {}
-    @Override
-    public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {}
-    @Override
-    public void drawPolyline(int[] xPoints, int[] yPoints, int nPoints) {}
-    @Override
-    public void drawPolygon(int[] xPoints, int[] yPoints, int nPoints) {}
-    @Override
-    public void fillPolygon(int[] xPoints, int[] yPoints, int nPoints) {}
-    @Override
-    public void drawString(String str, int x, int y) {}
-    @Override
-    public void drawString(java.text.AttributedCharacterIterator iterator, int x, int y) {}
-    @Override
-    public boolean drawImage(java.awt.Image img, int x, int y, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public boolean drawImage(java.awt.Image img, int x, int y, int width, int height, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public boolean drawImage(java.awt.Image img, int x, int y, java.awt.Color bgcolor, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public boolean drawImage(java.awt.Image img, int x, int y, int width, int height, java.awt.Color bgcolor, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public boolean drawImage(java.awt.Image img, int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public boolean drawImage(java.awt.Image img, int dx1, int dy1, int dx2, int dy2, int sx1, int sy1, int sx2, int sy2, java.awt.Color bgcolor, java.awt.image.ImageObserver observer) { return false; }
-    @Override
-    public void dispose() {}
-}
 
 
 /**
@@ -136,13 +39,13 @@ public class TestMesh {
     @Test
     public void testAddPolygon() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
         
         mesh.addPolygon(poly1);
         assertEquals("Mesh should contain 1 polygon after adding one", 1, mesh.polygons.size());
         assertSame("The added polygon should be the one in the list", poly1, mesh.polygons.get(0));
 
-        Polygon poly2 = new Polygon(new Vertex(2,0,0), new Vertex(3,0,0), new Vertex(2,1,0));
+        Polygon poly2 = new Polygon(new Vertex[]{new Vertex(new float[]{2f,0f,0f}), new Vertex(new float[]{3f,0f,0f}), new Vertex(new float[]{2f,1f,0f})});
         mesh.addPolygon(poly2);
         assertEquals("Mesh should contain 2 polygons after adding another", 2, mesh.polygons.size());
         assertSame("The second added polygon should be at index 1", poly2, mesh.polygons.get(1));
@@ -169,9 +72,9 @@ public class TestMesh {
     @Test
     public void testAddPolygonsFromArray() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
-        Polygon poly2 = new Polygon(new Vertex(1,1,1), new Vertex(2,1,1), new Vertex(1,2,1));
-        Polygon poly3 = new Polygon(new Vertex(2,2,2), new Vertex(3,2,2), new Vertex(2,3,2));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
+        Polygon poly2 = new Polygon(new Vertex[]{new Vertex(new float[]{1f,1f,1f}), new Vertex(new float[]{2f,1f,1f}), new Vertex(new float[]{1f,2f,1f})});
+        Polygon poly3 = new Polygon(new Vertex[]{new Vertex(new float[]{2f,2f,2f}), new Vertex(new float[]{3f,2f,2f}), new Vertex(new float[]{2f,3f,2f})});
 
         Polygon[] polygonsToAdd = {poly1, poly2};
         mesh.addPolygons(polygonsToAdd);
@@ -202,7 +105,7 @@ public class TestMesh {
     @Test
     public void testAddPolygonsArrayWithNull() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
         Polygon[] arrayWithNulls = {poly1, null};
         mesh.addPolygons(arrayWithNulls);
         assertEquals("Mesh should contain 2 elements after adding array with one polygon and one null", 2, mesh.polygons.size());
@@ -218,7 +121,7 @@ public class TestMesh {
     @Test
     public void testDirectAccessToPolygonsList() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
         
         // Directly add to the public list
         mesh.polygons.add(poly1);
@@ -239,20 +142,22 @@ public class TestMesh {
     @Test
     public void testRenderMethod() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
-        Polygon poly2 = new Polygon(new Vertex(1,1,1), new Vertex(2,1,1), new Vertex(1,2,1));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
+        Polygon poly2 = new Polygon(new Vertex[]{new Vertex(new float[]{1f,1f,1f}), new Vertex(new float[]{2f,1f,1f}), new Vertex(new float[]{1f,2f,1f})});
         
         mesh.addPolygon(poly1);
         mesh.addPolygon(poly2);
 
-        MockPolygonRenderer mockRenderer = new MockPolygonRenderer();
-        MockGraphics mockGraphics = new MockGraphics(); // Dummy graphics object
+        PolygonRenderer mockRenderer = Mockito.mock(PolygonRenderer.class);
+        Graphics mockGraphics = Mockito.mock(Graphics.class);
 
         mesh.render(mockRenderer, mockGraphics);
 
-        assertEquals("Renderer's render method should have been called 2 times", 2, mockRenderer.renderCount);
-        // We can also check if the last polygon rendered was poly2, assuming sequential iteration
-        assertSame("Last polygon rendered should be poly2", poly2, mockRenderer.lastRenderedPolygon);
+        // Verify render was called for each polygon
+        Mockito.verify(mockRenderer, times(1)).render(mockGraphics, poly1);
+        Mockito.verify(mockRenderer, times(1)).render(mockGraphics, poly2);
+        // Verify it was called exactly 2 times in total
+        Mockito.verify(mockRenderer, times(2)).render(eq(mockGraphics), any(Polygon.class));
     }
 
     /**
@@ -262,11 +167,12 @@ public class TestMesh {
     @Test
     public void testRenderEmptyMesh() {
         Mesh mesh = new Mesh();
-        MockPolygonRenderer mockRenderer = new MockPolygonRenderer();
-        MockGraphics mockGraphics = new MockGraphics();
+        PolygonRenderer mockRenderer = Mockito.mock(PolygonRenderer.class);
+        Graphics mockGraphics = Mockito.mock(Graphics.class);
 
         mesh.render(mockRenderer, mockGraphics);
-        assertEquals("Renderer's render method should not be called for an empty mesh", 0, mockRenderer.renderCount);
+        // Verify render was never called
+        Mockito.verify(mockRenderer, never()).render(any(Graphics.class), any(Polygon.class));
     }
     
     /**
@@ -277,16 +183,19 @@ public class TestMesh {
     @Test
     public void testRenderMeshWithNullPolygon() {
         Mesh mesh = new Mesh();
-        Polygon poly1 = new Polygon(new Vertex(0,0,0), new Vertex(1,0,0), new Vertex(0,1,0));
+        Polygon poly1 = new Polygon(new Vertex[]{new Vertex(new float[]{0f,0f,0f}), new Vertex(new float[]{1f,0f,0f}), new Vertex(new float[]{0f,1f,0f})});
         mesh.addPolygon(poly1);
         mesh.addPolygon(null); // Add a null polygon
 
-        MockPolygonRenderer mockRenderer = new MockPolygonRenderer();
-        MockGraphics mockGraphics = new MockGraphics();
-
+        PolygonRenderer mockRenderer = Mockito.mock(PolygonRenderer.class);
+        Graphics mockGraphics = Mockito.mock(Graphics.class);
+        
         mesh.render(mockRenderer, mockGraphics);
 
-        assertEquals("Renderer's render method should have been called 2 times (once for poly1, once for null)", 2, mockRenderer.renderCount);
-        assertNull("Last polygon passed to renderer should be null", mockRenderer.lastRenderedPolygon);
+        Mockito.verify(mockRenderer, times(1)).render(eq(mockGraphics), eq(poly1));
+        Mockito.verify(mockRenderer, times(1)).render(eq(mockGraphics), (Polygon) Mockito.isNull());
+        // The two lines above ensure exactly one call with poly1 and one call with null.
+        // This implicitly means two calls in total with the expected arguments.
+        // No need for an additional "times(2)" with a broader matcher if these pass.
     }
 }

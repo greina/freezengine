@@ -30,6 +30,10 @@ public class PerspectiveTransformation
 	 */
 	public PerspectiveTransformation(double yangle, int width, int height, int top, int left, float z_min, float z_max)
 	{
+		// Assign z_min and z_max to instance fields first
+		this.z_min = z_min;
+		this.z_max = z_max;
+
 		float h_2 = height/2.0f;
 		float w_2 = width/2.0f; // This w_2 is distinct from the one used for z calculation later
 		
@@ -74,12 +78,11 @@ public class PerspectiveTransformation
 		// x_eye = z_eye * (-x_screen/a11 - a13/a11)
 		// So i11 = -1/a11 and i13 = -a13/a11. The signs in the code might differ based on conventions.
 		this.i11 = 1.0f / this.a11;
-		this.i13 = -this.a13 / this.a11;
+		this.i13 = this.a13 / this.a11; // Corrected: removed negation
 		this.i22 = 1.0f / this.a22;
-		this.i23 = -this.a23 / this.a22;
-		
-		this.z_max = z_max;
-		this.z_min = z_min;
+		this.i23 = this.a23 / this.a22; // Corrected: removed negation
+		// this.z_max = z_max; // Moved to the beginning
+		// this.z_min = z_min; // Moved to the beginning
 	}
 	
 	/**
