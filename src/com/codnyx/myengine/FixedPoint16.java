@@ -94,7 +94,8 @@ public class FixedPoint16
 	 */
 	public final int toInt()
 	{
-		return value>>SCALE_BITS;
+		// Using integer division for truncation towards zero, consistent with (int)float_val
+		return value / SCALE; 
 	}
 	
 	/**
@@ -201,7 +202,8 @@ public class FixedPoint16
 	 */
 	public final static int ToInt(int value)
 	{
-		return value>>SCALE_BITS;
+		// Using integer division for truncation towards zero
+		return value / SCALE;
 	}
 
 }

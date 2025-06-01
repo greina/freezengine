@@ -24,6 +24,31 @@ public class Vertex {
 	 * The color of the vertex, represented as an integer (RGB).
 	 */
 	int color = COLOR_WHITE;
+
+    // Getter for normal
+    public float[] getNormal() {
+        return normal;
+    }
+
+    // Setter for normal (consider if cloning is needed depending on usage)
+    public void setNormal(float[] normal) {
+        this.normal = normal;
+    }
+
+    // Getter for color (int ARGB)
+    public int getRGBColor() {
+        return color;
+    }
+
+    // Setter for color (int ARGB)
+    public void setRGBColor(int color) {
+        this.color = color;
+    }
+
+    // Setter for color (java.awt.Color)
+    public void setColor(Color color) {
+        this.color = color.getRGB();
+    }
 	
 	/**
 	 * Default constructor. Initializes the vertex at the origin (0,0,0) with the default color and no normal.

@@ -14,7 +14,7 @@ public class ProjectedVertex extends Vertex
 	 * The 2D screen coordinates {x, y} of the projected vertex. 
 	 * Initialized to {0,0}.
 	 */
-	int[] projection = {0,0}; 
+	public int[] projection = {0,0}; 
 	/** 
 	 * The depth of the vertex after perspective projection. 
 	 * This is typically the transformed Z-value used for Z-buffering.
@@ -98,8 +98,6 @@ public class ProjectedVertex extends Vertex
 	 */
 	public ProjectedVertex(ProjectedVertex vertex)
 	{
-		// super(vertex); // This would call Vertex(Vertex)
-		// setTo(vertex); // This is more direct for full copy
 		this.setTo(vertex); // Use specific setTo for ProjectedVertex
 	}
 	
@@ -113,7 +111,17 @@ public class ProjectedVertex extends Vertex
 	public void setTo(Vertex v)
 	{
 		super.setTo(v);
-		init(); // Reset projection-specific fields
+        // DO NOT call init() here.
+        // If this method is called during the superclass constructor phase (which it is for ProjectedVertex(Vertex v)
+        // via super(v) -> Vertex(v) -> this.setTo(v)), the 'projection' field of ProjectedVertex
+        // will not have been initialized by its declaration yet (int[] projection = {0,0}; runs after super constructor).
+        // Thus, 'projection' would be null, and init() would cause an NPE on Arrays.fill(projection, 0).
+        // The ProjectedVertex(Vertex v) constructor calls init() appropriately after super(v) completes.
+        // When this setTo(Vertex v) is called on an already fully constructed ProjectedVertex,
+        // not calling init() means projection & depth fields retain their current values, which is
+        // generally the expected behavior for a method that primarily sets superclass fields.
+        // If a full reset including projection fields is desired, then pv.reset() or pv.init()
+        // should be called explicitly by the user after pv.setTo(vertex).
 	}
 	
 	
@@ -131,7 +139,9 @@ public class ProjectedVertex extends Vertex
 		if (pv.projection != null) {
 			this.projection = pv.projection.clone();
 		} else {
-			this.projection = new int[]{0,0}; // Or handle as an error/default
+			// This case should ideally not be hit if projection is always initialized by declaration.
+			// However, as a safeguard:
+			this.projection = new int[]{0,0}; 
 		}
 	}
 	
@@ -141,6 +151,11 @@ public class ProjectedVertex extends Vertex
 	 */
 	private final void init()
 	{
+        // Ensure projection is initialized before use, if not already by declaration.
+        // This is defensive, as field initializer should handle it.
+        if (this.projection == null) {
+            this.projection = new int[]{0,0};
+        }
 		Arrays.fill(projection, 0);
 		depth = 0;
 	}

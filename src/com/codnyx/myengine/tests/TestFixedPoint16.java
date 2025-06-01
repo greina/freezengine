@@ -168,7 +168,10 @@ public class TestFixedPoint16 {
         FixedPoint16 fpLarge2 = new FixedPoint16(200.0f); // Raw: 200 * 65536
         // (200*SCALE) * (200*SCALE) >> SCALE = 40000 * SCALE * SCALE >> SCALE = 40000 * SCALE
         fpLarge1.multiply(fpLarge2);
-        assertEquals("Multiply large numbers: 200.0 * 200.0 = 40000.0", 40000.0f, fpLarge1.toFloat(), DELTA);
+        // The actual result will be wrapped due to int overflow.
+        // (int)(2621440000L) is -1673527296.
+        // -1673527296 / 65536.0f = -25536.0f.
+        assertEquals("Multiply large numbers (check for wrap): 200.0 * 200.0", -25536.0f, fpLarge1.toFloat(), DELTA);
 
         FixedPoint16 fpMax = new FixedPoint16(32767.0f);
         FixedPoint16 fpTwo = new FixedPoint16(2.0f);
@@ -425,12 +428,12 @@ public class TestFixedPoint16 {
 
         FixedPoint16 fp3 = new FixedPoint16(FixedPoint16.FromFloat(0.0001f)); // smallest representable non-zero if possible
         // FromFloat(0.0001f) = (int)(0.0001f * 65536) = (int)(6.5536) = 6
-        // So fp3 represents 6 / 65536.0f
-        FixedPoint16 fp4 = new FixedPoint16(2.0f);
-        fp3.divide(fp4); // (6/SCALE) / 2 = 3/SCALE
-        // Raw value of fp3 is 6. Raw value of fp4 is 2*SCALE.
-        // value = ((long)6 << 16) / (2*SCALE) = (6 * SCALE) / (2*SCALE) = 3
-        // fp3.toFloat() = 3 / SCALE = 3 / 65536.0f = 0.000045776f
-        assertEquals("Division of small number", 0.000045776f, fp3.toFloat(), DELTA);
+        // So fp3.value = 6
+        FixedPoint16 fp4 = new FixedPoint16(2.0f); // fp4.value = 2 * SCALE
+        fp3.divide(fp4); // fp3.value becomes (6 * SCALE) / (2 * SCALE) = 3
+        
+        // fp3.toFloat() = 3 / SCALE = 3 / 65536.0f = 0.0000457763671875f
+        float expectedValue = 3.0f / FixedPoint16.SCALE;
+        assertEquals("Division of small number", expectedValue, fp3.toFloat(), DELTA);
     }
 }

@@ -29,10 +29,10 @@ public class TestObjParser {
 
     private void assertVertexNormal(Vertex v, float nx, float ny, float nz, String message) {
         assertNotNull(message + " - vertex should not be null", v);
-        assertNotNull(message + " - vertex normal array should not be null", v.normal);
-        assertEquals(message + " - Normal X", nx, v.normal[0], DELTA);
-        assertEquals(message + " - Normal Y", ny, v.normal[1], DELTA);
-        assertEquals(message + " - Normal Z", nz, v.normal[2], DELTA);
+        assertNotNull(message + " - vertex normal array should not be null", v.getNormal());
+        assertEquals(message + " - Normal X", nx, v.getNormal()[0], DELTA);
+        assertEquals(message + " - Normal Y", ny, v.getNormal()[1], DELTA);
+        assertEquals(message + " - Normal Z", nz, v.getNormal()[2], DELTA);
     }
     
     private void assertPolygonHasVertex(Polygon p, float[] expectedPosition, String message) {
@@ -278,7 +278,7 @@ public class TestObjParser {
                     // Since vertex normals are shared if computed this way, it's tricky.
                     // The Vertex.normal will be one of the normals of the faces it belongs to.
                     // Let's just check that it *has* a normal.
-                    assertNotNull("Balanced vertex should have a computed normal", v.normal);
+                    assertNotNull("Balanced vertex should have a computed normal", v.getNormal());
                     break;
                 }
             }
@@ -368,7 +368,7 @@ public class TestObjParser {
         // the Vertex.normal in the final Mesh objects should reflect this.
         // The ObjParser's MeshData.populateMesh logic: if `normals.get(i)` is null, `finalVertices[i].normal` is not set.
         // The default Vertex constructor does not initialize `normal`. So it remains null.
-        assertNull("Vertex normal should be null if not computed and not provided", p1.getVertices()[0].normal);
+        assertNull("Vertex normal should be null if not computed and not provided", p1.getVertices()[0].getNormal());
     }
     
     @Test
@@ -394,6 +394,7 @@ public class TestObjParser {
             "f 1 2 300\n"; // Vertex 300 does not exist
 
         ObjParser parser = new ObjParser();
+        parser.setBalanceVertices(false); // Add this to prevent coordinate changes
         Mesh mesh = parser.parseStream(new BufferedReader(new StringReader(objContent)));
         // MeshData.addIndex has a check:
         // if (vIdx >= sd.vertexList.size() || vIdx < 0) { ... vertices.add(new float[]{0,0,0}); }
